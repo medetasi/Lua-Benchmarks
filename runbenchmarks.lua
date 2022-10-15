@@ -4,9 +4,9 @@
 
 -- List of binaries that will be tested
 local binaries = {
-    { 'lua-5.3.4', 'lua' },
-    { 'luajit-2.0.4-interp', 'luajit -joff' },
-    { 'luajit-2.0.4', 'luajit' },
+    { 'lua-5.4.4', 'lua' },
+    { 'luajit-2.1.0-interp', 'luajit -joff' },
+    { 'luajit-2.1.0', 'luajit' },
 }
 
 -- List of tests
@@ -31,7 +31,7 @@ local tests = {
 -- Command line arguments ------------------------------------------------------
 
 local nruns = 3
-local supress_errors = true 
+local supress_errors = true
 local basename = 'results'
 local normalize = false
 local speedup = false
@@ -54,6 +54,7 @@ local function parse_args()
         print('Error: ' .. msg .. '\n' .. usage)
         os.exit(1)
     end
+
     local function get_next_arg(i)
         if i + 1 > #arg then
             parse_error(arg[i] .. ' requires a value')
@@ -62,6 +63,7 @@ local function parse_args()
         arg[i + 1] = nil
         return v
     end
+
     for i = 1, #arg do
         if not arg[i] then goto continue end
         if arg[i] == '--nruns' then
@@ -93,8 +95,9 @@ end
 
 -- Run the command a single time and returns the time elapsed
 local function measure(cmd)
-    local time_cmd = '{ TIMEFORMAT=\'%3R\'; time ' ..  cmd ..
-            ' > /dev/null; } 2>&1'
+    -- 这里在 linux 下执行有问题，Lua 的 popen 默认使用 sh 来执行，sh 的 time 返回值有问题，要用 bash 运行才能正确处理
+    local time_cmd = 'bash -c ' .. '\"{ TIMEFORMAT=\'%3R\'; time ' .. cmd ..
+        ' > /dev/null; } 2>&1\"'
     local handle = io.popen(time_cmd)
     local result = handle:read("*a")
     local time_elapsed = tonumber(result)
@@ -142,7 +145,7 @@ local function run_all()
             end
         end
     end
-    return results 
+    return results
 end
 
 -- Perform an operation for each value in the matrix
@@ -174,7 +177,7 @@ local function create_data_file(results)
     for i, test in ipairs(tests) do
         data = data .. test[1] .. '\t'
         for j, _ in ipairs(binaries) do
-            data = data .. results[i][j] .. '\t' 
+            data = data .. results[i][j] .. '\t'
         end
         data = data .. '\n'
     end
@@ -192,9 +195,9 @@ local function generate_image()
         ylabel = 'Elapsed time'
     end
     os.execute('gnuplot -e "datafile=\'' .. basename .. '.txt\'" ' ..
-               '-e "outfile=\'' .. basename .. '.png\'" ' ..
-               '-e "ylabel=\'' .. ylabel .. '\'" ' ..
-               '-e "nbinaries=' .. #binaries .. '" plot.gpi')
+        '-e "outfile=\'' .. basename .. '.png\'" ' ..
+        '-e "ylabel=\'' .. ylabel .. '\'" ' ..
+        '-e "nbinaries=' .. #binaries .. '" plot.gpi')
 end
 
 local function setup()
@@ -224,6 +227,7 @@ local function main()
             return v
         end
     end
+
     process_results(results, f)
     create_data_file(results)
     if plot then generate_image() end
@@ -231,4 +235,3 @@ local function main()
 end
 
 main()
-
